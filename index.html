@@ -12,10 +12,10 @@
         .sidebar { width: 280px; background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 15px; box-sizing: border-box; overflow-y: auto; }
         .sidebar h3 { margin-top: 0; border-bottom: 2px solid var(--accent); padding-bottom: 8px; color: var(--primary); }
         .chapter-list { list-style: none; padding: 0; margin: 0; }
-        .chapter-item { padding: 10px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); background: #fafafa; transition: 0.2s; }
+        .chapter-item { padding: 12px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); background: #fafafa; transition: 0.2s; }
         .chapter-item:hover { background: var(--light); }
         .chapter-item.active { background: #e3f2fd; border-color: var(--accent); font-weight: bold; }
-        .chapter-title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+        .chapter-title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
         .main-content { flex: 1; padding: 25px; box-sizing: border-box; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
         .input-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); }
         .form-group { margin-bottom: 12px; }
@@ -23,20 +23,22 @@
         input[type="text"], textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; }
         textarea { height: 80px; resize: vertical; }
         .btn-group { display: flex; gap: 10px; margin-top: 10px; }
-        button { background: var(--accent); color: white; border: none; padding: 10px 15px; font-size: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button { background: var(--accent); color: white; border: none; padding: 12px 15px; font-size: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         button:hover { opacity: 0.9; }
         .btn-add-chap { background: var(--primary); margin-bottom: 15px; width: 100%; }
-        .btn-del { background: #e74c3c; width: auto; padding: 4px 8px; font-size: 11px; margin-top: 0; }
+        .btn-del { background: #e74c3c; width: auto; padding: 6px 10px; font-size: 12px; margin-top: 0; }
         .book-page { background: #fffcf5; border: 1px solid #f1e5c9; padding: 25px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); min-height: 200px; }
-        .kaiwa-row { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #e6dbb9; line-height: 3; }
+        .kaiwa-row { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #e6dbb9; line-height: 3; font-size: 24px; }
         ruby { ruby-position: over; font-size: 26px; cursor: pointer; padding: 0 4px; border-radius: 4px; }
         ruby:hover { background-color: #e1f5fe; }
         rt { font-size: 13px; color: #555; user-select: none; font-weight: normal; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; }
+        .footer-reset { text-align: center; margin-top: auto; padding-top: 15px; }
+        .btn-reset { background: #95a5a6; font-size: 11px; padding: 5px 10px; width: 100%; }
         @media (max-width: 768px) {
             .book-container { flex-direction: column; }
-            .sidebar { width: 100%; height: 230px; border-right: none; border-bottom: 1px solid var(--border); }
+            .sidebar { width: 100%; height: 260px; border-right: none; border-bottom: 1px solid var(--border); }
         }
     </style>
 </head>
@@ -51,6 +53,9 @@
         <h3>Daftar Isi Bab</h3>
         <button class="btn-add-chap" onclick="createNewChapter()">+ Buat Bab Baru</button>
         <ul id="chapterList" class="chapter-list"></ul>
+        <div class="footer-reset">
+            <button class="btn-reset" onclick="resetAplikasiTotal()">Hapus Semua Data & Reset App</button>
+        </div>
     </div>
 
     <div class="main-content">
@@ -63,7 +68,7 @@
                 <label for="kaiwaInput">Tambahkan Percakapan (Kaiwa) Baru:</label>
                 <textarea id="kaiwaInput" placeholder="Ketik kalimat jepang di sini..."></textarea>
             </div>
-            <button style="width: 100%;" onclick="addKaiwaToChapter()">Masukkan ke dalam Bab</button>
+            <button style="width: 100%; background-color: #2ecc71;" onclick="addKaiwaToChapter()">Masukkan ke dalam Bab</button>
         </div>
 
         <div class="book-page">
@@ -93,14 +98,13 @@
 
 <script>
     let bookData = JSON.parse(localStorage.getItem('myKaiwaBook'));
-    
-    // Inisialisasi awal jika localstorage kosong total
-    if (!bookData || bookData.length === 0) {
-        bookData = [{ id: 1, title: 'Bab 1: Perkenalan', kaiwas: ['はじめまして。'] }];
+    if (!bookData || !Array.isArray(bookData) || bookData.length === 0) {
+        bookData = [{ id: 1, title: 'irodori a2/1 bab1', kaiwas: [] }];
+        localStorage.setItem('myKaiwaBook', JSON.stringify(bookData));
     }
     
     let kanjiDB = JSON.parse(localStorage.getItem('myKanjiDB')) || {};
-    let activeChapterId = bookData[0].id;
+    let activeChapterId = bookData[0].id; // KODE PERBAIKAN DI SINI
     let activeKanji = '';
 
     window.onload = function() {
@@ -136,13 +140,19 @@
 
     function addKaiwaToChapter() {
         const input = document.getElementById('kaiwaInput').value.trim();
-        if(!input) return;
+        if(!input) {
+            alert("Ketik kalimat kaiwa terlebih dahulu!");
+            return;
+        }
         const ch = bookData.find(c => c.id === activeChapterId);
         if(ch) {
+            if(!ch.kaiwas) ch.kaiwas = [];
             ch.kaiwas.push(input);
             document.getElementById('kaiwaInput').value = '';
             saveToLocalStorage();
             renderPageContent(ch);
+        } else {
+            alert("Pilih atau buat bab di daftar isi terlebih dahulu!");
         }
     }
 
@@ -152,7 +162,7 @@
         bookData.forEach(ch => {
             const li = document.createElement('li');
             li.className = `chapter-item ${ch.id === activeChapterId ? 'active' : ''}`;
-            li.onclick = () => loadChapter(ch.id);
+            li.setAttribute('onclick', `loadChapter(${ch.id})`);
             
             const titleSpan = document.createElement('span');
             titleSpan.className = 'chapter-title-text';
@@ -161,10 +171,7 @@
             const delBtn = document.createElement('button');
             delBtn.textContent = 'Hapus';
             delBtn.className = 'btn-del';
-            delBtn.onclick = (e) => {
-                e.stopPropagation();
-                deleteChapter(ch.id);
-            };
+            delBtn.setAttribute('onclick', `event.stopPropagation(); deleteChapter(${ch.id});`);
             
             li.appendChild(titleSpan);
             li.appendChild(delBtn);
@@ -177,8 +184,8 @@
         renderSidebar();
         const ch = bookData.find(c => c.id === id);
         if(ch) {
-            document.getElementById('chapterTitle').value = ch.title;
-            document.getElementById('pageTitle').textContent = ch.title;
+            document.getElementById('chapterTitle').value = ch.title || '';
+            document.getElementById('pageTitle').textContent = ch.title || 'Tanpa Judul';
             renderPageContent(ch);
         }
     }
@@ -186,22 +193,6 @@
     function renderPageContent(ch) {
         const container = document.getElementById('pageContent');
         container.innerHTML = '';
-        
         if(!ch.kaiwas || ch.kaiwas.length === 0) {
-            container.innerHTML = '<p style="color:#888; font-style:italic;">Bab ini masih kosong. Silakan tambahkan kalimat kaiwa di atas.</p>';
+            container.innerHTML = '<p style="color:#888; font-style:italic;">Bab ini masih kosong. Silakan masukkan kalimat kaiwa baru di atas.</p>';
             return;
-        }
-
-        ch.kaiwas.forEach((kaiwaText) => {
-            const row = document.createElement('div');
-            row.className = 'kaiwa-row';
-            
-            for (let char of kaiwaText) {
-                if (isKanji(char)) {
-                    const data = kanjiDB[char] || { furigana: '', radikal: '' };
-                    const ruby = document.createElement('ruby');
-                    ruby.textContent = char;
-                    ruby.onclick = () => openKanjiModal(char);
-                    
-                    const rt = document.createElement('rt');
-                    rt.textContent = data.furigana || '';
