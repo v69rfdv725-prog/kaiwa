@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Latihan Kaiwa & Kanji Mandiri</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --dark: #333;
+            --light: #f5f7fa;
+            --border: #ccc;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--light);
+            color: var(--dark);
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1, h2 { text-align: center; color: var(--primary); }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            font-size: 16px;
+            resize: vertical;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+        button:hover { background-color: #357abd; }
+        
+        /* Area Tampilan Kaiwa */
+        .kaiwa-display {
+            margin-top: 25px;
+            padding: 15px;
+            border-left: 5px solid var(--primary);
+            background: #fafafa;
+            line-height: 3;
+            font-size: 24px;
+        }
+        
+        /* Gaya Kanji & Furigana */
+        ruby {
+            ruby-position: over;
+            font-size: 26px;
+            cursor: pointer;
+            padding: 0 4px;
+            transition: background 0.2s;
+            border-radius: 4px;
+        }
+        ruby:hover { background-color: #e1f5fe; }
+        rt { font-size: 13px; color: #666; user-select: none; }
+
+        /* Modal / Menu Popup */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-content h3 { margin-top: 0; font-size: 22px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group textarea {
+            width: 100%; padding: 8px; box-sizing: border-box;
+            border: 1px solid var(--border); border-radius: 4px;
+        }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-close { background-color: #e0e0e0; color: #333; }
+        .btn-close:hover { background-color: #d5d5d5; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Latihan Kaiwa & Database Kanji Mandiri</h1>
+    
+    <!-- Input Teks Kaiwa -->
+    <div class="form-group">
+        <label for="kaiwaInput">Masukkan Teks Jepang / Kalimat Kaiwa:</label>
+        <textarea id="kaiwaInput" placeholder="Contoh: 私は日本語を勉強します。"></textarea>
+        <button onclick="generateKaiwa()">Proses & Tampilkan Kaiwa</button>
+    </div>
+
+    <!-- Output Hasil -->
+    <h2>Hasil Tampilan (Klik Kanji untuk Edit Arti Radikal & Cara Baca)</h2>
+    <div id="kaiwaDisplay" class="kaiwa-display">
+        Teks yang Anda proses akan muncul di sini...
+    </div>
+</div>
+
+<!-- Modal Menu Pengaturan Kanji -->
+<div id="kanjiModal" class="modal">
+    <div class="modal-content">
+        <h3 id="modalKanjiTitle">Pengaturan Kanji: 木</h3>
+        
+        <div class="form-group">
+            <label for="inputFurigana">Cara Baca (Furigana - akan muncul di atas kanji):</label>
+            <input type="text" id="inputFurigana" placeholder="Contoh: き / もく">
+        </div>
+        
+        <div class="form-group">
+            <label for="inputRadikal">Arti Radikal (Buatan Anda Sendiri):</label>
+            <textarea id="inputRadikal" style="height:80px;" placeholder="Contoh: Pohon, digunakan untuk elemen kayu..."></textarea>
+        </div>
+        
+        <div class="modal-buttons">
+            <button onclick="saveKanjiData()">Simpan Data</button>
+            <button class="btn-close" onclick="closeModal()">Batal</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Memuat database kanji dari LocalStorage browser (jika ada)
+    let kanjiDB = JSON.parse(localStorage.getItem('myKanjiDB')) || {};
+    let activeKanji = '';
+
+    // Fungsi mendeteksi apakah sebuah karakter adalah Kanji
+    function isKanji(ch) {
+        return (ch >= '\u4e00' && ch <= '\u9faf') || (ch >= '\u3400' && ch <= '\u4dbf');
+    }
+
+    // Fungsi memproses teks input menjadi teks ber-ruby
+    function generateKaiwa() {
+        const input = document.getElementById('kaiwaInput').value;
+        const display = document.getElementById('kaiwaDisplay');
+        display.innerHTML = ''; // Reset tampilan
+
+        if(!input.trim()) {
+            display.innerHTML = 'Silakan masukkan teks terlebih dahulu.';
+            return;
+        }
+
+        // Pecah teks per karakter
+        for (let char of input) {
+            if (isKanji(char)) {
+                // Ambil data lama jika sudah pernah diisi sebelumnya
+                const data = kanjiDB[char] || { furigana: '', radikal: '' };
+                
+                // Buat elemen ruby HTML
+                const ruby = document.createElement('ruby');
+                ruby.textContent = char;
+                ruby.onclick = () => openKanjiModal(char);
+                
+                const rt = document.createElement('rt');
+                rt.textContent = data.furigana || ''; // Isi cara baca jika ada
+                
+                // Tambahkan tooltip bawaan browser untuk melihat arti radikal saat kursor diarahkan
+                if(data.radikal) {
+                    ruby.title = `Arti Radikal: ${data.radikal}`;
+                }
+                
+                ruby.appendChild(rt);
+                display.appendChild(ruby);
+            } else {
+                // Jika bukan kanji (hiragana/katakana/tanda baca), tampilkan biasa
+                const textNode = document.createTextNode(char);
+                display.appendChild(textNode);
+            }
+        }
+    }
+
+    // Fungsi membuka jendela pengaturan kanji yang diklik
+    function openKanjiModal(kanji) {
+        activeKanji = kanji;
+        document.getElementById('modalKanjiTitle').textContent = `Pengaturan Kanji: ${kanji}`;
+        
+        // Otomatis terisi dari info sebelumnya jika ada di database
+        const existingData = kanjiDB[kanji] || { furigana: '', radikal: '' };
+        document.getElementById('inputFurigana').value = existingData.furigana;
+        document.getElementById('inputRadikal').value = existingData.radikal;
+        
+        document.getElementById('kanjiModal').style.display = 'flex';
+    }
+
+    // Fungsi menutup modal
+    function closeModal() {
+        document.getElementById('kanjiModal').style.display = 'none';
+    }
+
+    // Fungsi menyimpan cara baca dan arti radikal buatan sendiri
+    function saveKanjiData() {
+        const furigana = document.getElementById('inputFurigana').value.trim();
+        const radikal = document.getElementById('inputRadikal').value.trim();
+        
+        // Simpan ke objek database local
+        kanjiDB[activeKanji] = { furigana, radikal };
+        
+        // Permanenkan ke LocalStorage browser
+        localStorage.setItem('myKanjiDB', JSON.stringify(kanjiDB));
+        
+        closeModal();
+        generateKaiwa(); // Refresh tampilan agar perubahan langsung terlihat
+    }
+</script>
+</body>
+</html>
